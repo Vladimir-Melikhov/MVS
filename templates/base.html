@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MVS | SYSTEM ROOT{% endblock %}</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@200;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --accent: #10b981; /* Emerald 500 */
+            --bg-deep: #030303;
+            --glass: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.08);
+        }
+        body {
+            background-color: var(--bg-deep);
+            color: #e5e7eb;
+            font-family: 'JetBrains Mono', monospace;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        /* Глобальный фон-сетка */
+        .tech-grid {
+            background-size: 50px 50px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            mask-image: radial-gradient(circle at 50% 0%, black 40%, transparent 100%);
+        }
+        /* Анимации */
+        .fade-in-up {
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+        
+        /* Утилиты */
+        .highlight { color: var(--accent); font-weight: 800; text-shadow: 0 0 15px rgba(16, 185, 129, 0.6); }
+        .blink { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+
+        /* Место для CSS конкретных страниц */
+        {% block css %}{% endblock %}
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-emerald-500/30 selection:text-emerald-400"
+      x-data="systemCore()">
+
+    <div class="tech-grid"></div>
+
+    {% block header %}
+        {% include 'includes/header.html' %}
+    {% endblock header %}
+
+    <div class="container mx-auto px-6 pt-32 pb-12 max-w-6xl z-10 flex-grow">
+        {% block content %}
+        {% endblock content %}
+    </div>
+
+    {% block footer %}
+        {% include 'includes/footer.html' %}
+    {% endblock footer %}
+
+    <script>
+        document.addEventListener('alpine:init', () => {
+            // Глобальная логика (расшифровка имени в hero-блоке)
+            Alpine.data('systemCore', () => ({
+                fullName: "MELIKHOV VLADIMIR SEMENOVICH",
+                shortName: "MVS",
+                displayName: [], 
+                decryptionComplete: false,
+                init() {
+                    this.displayName = this.shortName.split('');
+                    setTimeout(() => { this.decryptName(); }, 800);
+                },
+                isInitial(index) {
+                    if (!this.decryptionComplete) return true; 
+                    return [0, 9, 18].includes(index);
+                },
+                decryptName() {
+                    const target = this.fullName.split('');
+                    let currentLength = this.shortName.length; 
+                    const targetLength = target.length; 
+                    let interval = setInterval(() => {
+                        if (currentLength < targetLength) {
+                            currentLength++;
+                            let tempArr = [];
+                            for(let i=0; i<currentLength; i++) {
+                                if (i < this.fullName.length && Math.random() > 0.5) {
+                                    tempArr.push(this.fullName[i]); 
+                                } else {
+                                    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_#[]";
+                                    tempArr.push(chars[Math.floor(Math.random() * chars.length)]);
+                                }
+                            }
+                            this.displayName = tempArr;
+                        } else {
+                            this.displayName = this.fullName.split('');
+                            this.decryptionComplete = true;
+                            clearInterval(interval);
+                        }
+                    }, 70); 
+                }
+            }));
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

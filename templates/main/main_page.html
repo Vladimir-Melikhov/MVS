@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block css %}
+<style>
+    /* CSS специфичный только для главной (карточки и карусель) */
+    .card-spotlight {
+        background: var(--glass);
+        border: 1px solid var(--border);
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+    .card-spotlight:hover {
+        transform: translateY(-2px);
+        border-color: rgba(16, 185, 129, 0.3);
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
+    }
+    .reveal-char { display: inline-block; min-width: 0.6em; text-align: center; transition: color 0.3s ease; }
+    
+    .tech-image-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to bottom, transparent 50%, rgba(16, 185, 129, 0.1) 100%);
+        mix-blend-mode: overlay;
+        pointer-events: none;
+    }
+</style>
+{% endblock css %}
+
+{% block content %}
+    <header class="mb-24 relative">
+        <div class="text-xs text-emerald-600 mb-4 fade-in-up flex items-center space-x-2" style="animation-delay: 0.1s;">
+            <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+            <span>./root/portfolio/profile</span>
+        </div>
+
+        <div class="fade-in-up" style="animation-delay: 0.3s;">
+            <h1 class="text-2xl md:text-5xl lg:text-6xl font-bold leading-snug tracking-tight mb-2 min-h-[60px] md:min-h-[80px] break-normal whitespace-normal w-full max-w-full">
+                <template x-for="(char, index) in displayName" :key="index">
+                    <span class="reveal-char" :class="{ 'highlight': isInitial(index) }" x-text="char"></span>
+                </template>
+                <span class="blink text-emerald-500" x-show="!decryptionComplete">_</span>
+            </h1>
+            
+            <p class="text-gray-400 text-sm md:text-base max-w-xl mt-4 border-l border-emerald-500/30 pl-4">
+                Full Stack Developer. Building scalable backend architectures and reactive interfaces. 
+                <br><span class="text-gray-600 text-xs mt-1 block">> SYSTEM READY. SELECT PROJECT BELOW.</span>
+            </p>
+        </div>
+    </header>
+
+    <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 fade-in-up" 
+          style="animation-delay: 0.6s;"
+          x-data="{ hoveredId: null }">
+
+        {% if object_list %}
+            {% for project in object_list %}
+            <div class="card-spotlight rounded-lg group h-full flex flex-col"
+                 @mouseenter="hoveredId = {{ project.id }}"
+                 @mouseleave="hoveredId = null"
+                 x-data="cardLogic('{{ project.name }}')">
+                
+                <div class="pointer-events-none absolute -inset-px opacity-0 transition duration-300 group-hover:opacity-100"
+                     :style="`background: radial-gradient(600px circle at ${mouse.x}px ${mouse.y}px, rgba(16, 185, 129, 0.06), transparent 40%);`"
+                     @mousemove.window="handleMouseMove($event, $el.closest('.card-spotlight'))">
+                </div>
+
+                <div class="relative p-6 h-full flex flex-col z-20">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="text-[10px] font-bold text-gray-600 border border-gray-800 px-2 py-0.5 rounded">
+                            ID:{{ project.id|stringformat:"02d" }}
+                        </span>
+                        <div class="flex space-x-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-gray-700 group-hover:bg-emerald-500 transition-colors"></span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-gray-700"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-5 relative h-48 w-full bg-black/40 rounded border border-white/5 overflow-hidden group/carousel"
+                         x-data="{ 
+                            activeSlide: 0, 
+                            slides: [
+                                {% if project.poster %}'{{ project.poster.url }}'{% endif %}
+                                {% if project.poster_2 %},'{{ project.poster_2.url }}'{% endif %}
+                                {% if project.poster_3 %},'{{ project.poster_3.url }}'{% endif %}
+                            ] 
+                         }">
+                        
+                        <div x-show="slides.length === 0" class="flex items-center justify-center h-full text-gray-700 text-xs font-mono">
+                            [ NO_IMG_DATA ]
+                        </div>
+
+                        <template x-for="(slide, index) in slides" :key="index">
+                            <div x-show="activeSlide === index" 
+                                 class="absolute inset-0 transition-opacity duration-300"
+                                 x-transition:enter="opacity-0"
+                                 x-transition:enter-end="opacity-100">
+                                <img :src="slide" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity">
+                                <div class="tech-image-overlay"></div>
+                            </div>
+                        </template>
+
+                        <div x-show="slides.length > 1" class="absolute inset-0 flex items-center justify-between px-2 opacity-0 group-hover/carousel:opacity-100 transition-opacity">
+                            <button @click.stop="activeSlide = activeSlide === 0 ? slides.length - 1 : activeSlide - 1" 
+                                    class="bg-black/60 hover:bg-emerald-500 hover:text-black text-white p-1 rounded transition-colors">&lt;</button>
+                            <button @click.stop="activeSlide = activeSlide === slides.length - 1 ? 0 : activeSlide + 1" 
+                                    class="bg-black/60 hover:bg-emerald-500 hover:text-black text-white p-1 rounded transition-colors">&gt;</button>
+                        </div>
+
+                        <div x-show="slides.length > 1" class="absolute bottom-2 left-0 w-full flex justify-center space-x-1">
+                            <template x-for="(slide, index) in slides">
+                                <div class="h-0.5 w-3 transition-colors" :class="activeSlide === index ? 'bg-emerald-500' : 'bg-gray-700'"></div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" @mouseenter="scramble">
+                        <h3 class="text-xl font-bold text-white group-hover:text-emerald-400 transition-colors h-[1.5em]" x-text="displayText">
+                            {{ project.name }}
+                        </h3>
+                    </div>
+
+                    <p class="text-sm text-gray-400 mb-8 leading-relaxed line-clamp-3 group-hover:text-gray-300 transition-colors">
+                        {{ project.description }}
+                    </p>
+
+                    <div class="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
+                        <div class="flex items-center text-[10px] uppercase tracking-wider space-x-2">
+                            <span class="text-gray-500">Mode:</span>
+                            {% if project.demonstration %}
+                                <span class="text-emerald-500 flex items-center font-bold" title="Demonstration Work">
+                                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5 animate-pulse"></span>
+                                    DEMONSTRATION
+                                </span>
+                            {% else %}
+                                <span class="text-red-500 flex items-center font-bold" title="Private Project">
+                                    <span class="w-1.5 h-1.5 bg-red-500 rounded-full mr-1.5"></span>
+                                    LIVE_SYSTEM
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        {% if project.link %}
+                            <a href="{{ project.link }}" target="_blank" class="text-xs text-white group-hover:text-emerald-400 transition-colors flex items-center cursor-pointer hover:underline decoration-emerald-500/50 underline-offset-4">
+                                [ INSPECT ] <span class="ml-1 text-[10px]">➜</span>
+                            </a>
+                        {% else %}
+                            <span class="text-xs text-gray-600 cursor-not-allowed flex items-center" title="Link not established">
+                                [ OFFLINE ] <span class="ml-1 text-[10px]">✕</span>
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-span-full border border-dashed border-gray-800 p-12 text-center rounded-lg">
+                <p class="text-gray-500">> DATABASE_EMPTY</p>
+            </div>
+        {% endif %}
+
+    </main>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('cardLogic', (originalTitle) => ({
+            displayText: originalTitle,
+            mouse: { x: 0, y: 0 },
+            scrambleInterval: null,
+            chars: '010101XY_#[]',
+            handleMouseMove(e, card) {
+                const rect = card.getBoundingClientRect();
+                this.mouse.x = e.clientX - rect.left;
+                this.mouse.y = e.clientY - rect.top;
+            },
+            scramble() {
+                let iteration = 0;
+                clearInterval(this.scrambleInterval);
+                this.scrambleInterval = setInterval(() => {
+                    this.displayText = originalTitle.split("").map((letter, index) => {
+                        if(index < iteration) return originalTitle[index];
+                        return this.chars[Math.floor(Math.random() * this.chars.length)]
+                    }).join("");
+                    if(iteration >= originalTitle.length){ 
+                        clearInterval(this.scrambleInterval);
+                    }
+                    iteration += 1 / 3;
+                }, 30);
+            }
+        }));
+    });
+</script>
+{% endblock scripts %}
