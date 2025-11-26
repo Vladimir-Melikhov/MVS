@@ -1,34 +1,54 @@
+# Python & Django
 *.pyc
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
+dist/
+build/
 
-.env
-*.log
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+env/
+.venv
+
+# Варианты расположения venv (на всякий случай)
+*/venv/
+*/.venv/
+*/env/
+*/ENV/
+
+# Базы данных
 db.sqlite3
-db.sqlite3-journal
+*.sqlite3
+*.sqlite3-journal
 
-/media
-/staticfiles
-/logs
+# БД в подпапках
+*/db.sqlite3
+*/*/db.sqlite3
+*/*/*/db.sqlite3
 
+# Окружение и секреты
+.env
+.env.*
+*.env
+
+# Логи и медиа
+*.log
+logs/
+staticfiles/
+media/
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
+# Mac & Windows
 .DS_Store
 Thumbs.db
-
-venv/
-env/
-.env/
-__pycache__/
-*.pyc
-.DS_Store
-.idea/
-.vscode/
-*.egg-info/
-dist/
-build/
