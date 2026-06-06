@@ -1,0 +1,366 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MVS | SYSTEM ROOT{% endblock %}</title>
+    
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+    <link rel="shortcut icon" type="image/png" href="{% static 'img/favicon.png' %}">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@200;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --accent: #10b981;
+            --bg-deep: #030303;
+            --glass: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.08);
+        }
+        body {
+            background-color: var(--bg-deep);
+            color: #e5e7eb;
+            font-family: 'JetBrains Mono', monospace;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            cursor: default; 
+        }
+        
+        /* ТВОЙ ФОН (Сетка) */
+        .tech-grid {
+            background-size: 50px 50px;
+            background-image: 
+                linear-gradient(to right, rgba(16, 185, 129, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(16, 185, 129, 0.03) 1px, transparent 1px);
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            mask-image: radial-gradient(circle at 50% 0%, black 40%, transparent 100%);
+            will-change: transform;
+        }
+
+        /* ТВОИ ЧАСТИЦЫ */
+        #particles {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* КВАДРАТИК 3x3 */
+        #matrix-scanner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 40px; 
+            height: 40px;
+            z-index: 0; 
+            pointer-events: none;
+            
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            
+            mix-blend-mode: plus-lighter;
+            opacity: 0.6;
+        }
+
+        .matrix-char {
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            text-shadow: 0 0 4px rgba(16, 185, 129, 0.8);
+            font-weight: bold;
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        @keyframes fadeInUp { 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        .highlight { 
+            color: var(--accent); 
+            font-weight: 800; 
+            text-shadow: 0 0 15px rgba(16, 185, 129, 0.6); 
+        }
+        .blink { 
+            animation: blinker 1s linear infinite; 
+        }
+        @keyframes blinker { 
+            50% { opacity: 0; } 
+        }
+
+        .parallax {
+            will-change: transform;
+            transition: transform 0.1s ease-out;
+        }
+
+        {% block css %}{% endblock %}
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-emerald-500/30 selection:text-emerald-400"
+      x-data="systemCore()"
+      @scroll.window="handleParallax">
+
+    <canvas id="particles"></canvas>
+    <div class="tech-grid parallax" data-speed="0.5"></div>
+    <div id="matrix-scanner"></div>
+
+    {% block header %}
+        {% include 'includes/header.html' %}
+    {% endblock header %}
+
+    <div class="container mx-auto px-6 pt-32 pb-12 max-w-6xl z-10 flex-grow relative">
+        {% block content %}
+        {% endblock content %}
+    </div>
+
+    {% block footer %}
+        {% include 'includes/footer.html' %}
+    {% endblock footer %}
+
+    <div x-data="{ 
+            show: false,
+            init() {
+                if (!localStorage.getItem('mvs_cookie_accepted')) {
+                    setTimeout(() => this.show = true, 1000);
+                }
+            },
+            accept() {
+                localStorage.setItem('mvs_cookie_accepted', 'true');
+                this.show = false;
+            }
+         }"
+         x-show="show"
+         x-transition:enter="transition ease-out duration-500"
+         x-transition:enter-start="translate-y-full opacity-0"
+         x-transition:enter-end="translate-y-0 opacity-100"
+         x-transition:leave="transition ease-in duration-300"
+         x-transition:leave-start="translate-y-0 opacity-100"
+         x-transition:leave-end="translate-y-full opacity-0"
+         class="fixed bottom-0 left-0 w-full z-50 p-4 md:p-6"
+         style="display: none;">
+        
+        <div class="max-w-4xl mx-auto bg-[#050505]/90 border border-emerald-500/30 backdrop-blur-md rounded shadow-2xl p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-4 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-emerald-500 to-transparent opacity-50"></div>
+
+            <div class="flex-1">
+                <div class="flex items-center mb-2">
+                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse mr-2"></span>
+                    <span class="text-xs font-bold text-emerald-500 tracking-widest">SYSTEM_NOTICE // COOKIES_DETECTED</span>
+                </div>
+                <p class="text-xs text-gray-400 leading-relaxed">
+                    This system utilizes technical cookies to ensure optimal performance and security. 
+                    No personal tracking data is collected. By continuing to access this terminal, you acknowledge our protocols.
+                    <a href="{% url 'legal' %}" class="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 ml-1">View Protocols</a>
+                </p>
+            </div>
+
+            <button @click="accept()" 
+                    class="whitespace-nowrap px-6 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/50 hover:border-emerald-500 text-emerald-400 hover:text-emerald-300 text-xs font-bold tracking-wider transition-all rounded group">
+                [ ACKNOWLEDGE ]
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const scanner = document.getElementById('matrix-scanner');
+        const chars = "01XZY89#";
+        for(let i=0; i<9; i++) {
+            let div = document.createElement('div');
+            div.className = 'matrix-char';
+            scanner.appendChild(div);
+        }
+        const cells = document.querySelectorAll('.matrix-char');
+        let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
+        let scannerX = mouseX, scannerY = mouseY;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        function animateScanner() {
+            scannerX += (mouseX - scannerX) * 0.15;
+            scannerY += (mouseY - scannerY) * 0.15;
+            scanner.style.transform = `translate(${scannerX - 20}px, ${scannerY - 20}px)`;
+            cells.forEach(cell => {
+                if (Math.random() > 0.85) { 
+                    cell.innerText = chars[Math.floor(Math.random() * chars.length)];
+                    cell.style.opacity = Math.random() * 0.6 + 0.4;
+                }
+            });
+            requestAnimationFrame(animateScanner);
+        }
+        animateScanner();
+
+        const canvas = document.getElementById('particles');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const particles = [];
+        const particleCount = 50;
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 2;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+            }
+            draw() {
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.3)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        for (let i = 0; i < particleCount; i++) particles.push(new Particle());
+
+        function connectParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 150) {
+                        ctx.strokeStyle = `rgba(16, 185, 129, ${0.15 * (1 - dist / 150)})`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            connectParticles();
+            requestAnimationFrame(animate);
+        }
+        animate();
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('scrambleText', (initialText) => ({
+                text: initialText,
+                original: initialText,
+                interval: null,
+                chars: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_#[]",
+                
+                startScramble() {
+                    clearInterval(this.interval);
+                    let iteration = 0;
+                    
+                    this.interval = setInterval(() => {
+                        this.text = this.original
+                            .split("")
+                            .map((letter, index) => {
+                                if (index < iteration) return this.original[index];
+                                return this.chars[Math.floor(Math.random() * this.chars.length)];
+                            })
+                            .join("");
+                        
+                        if (iteration >= this.original.length) {
+                            clearInterval(this.interval);
+                            this.text = this.original;
+                        }
+                        
+                        iteration += 1 / 2; // Скорость расшифровки
+                    }, 30);
+                },
+                
+                reset() {
+                    clearInterval(this.interval);
+                    this.text = this.original;
+                }
+            }));
+
+            // Логика заголовка (MVS -> Full Name)
+            Alpine.data('systemCore', () => ({
+                fullName: "MELIKHOV VLADIMIR SEMENOVICH",
+                shortName: "MVS", // Начальное состояние
+                displayName: [], 
+                decryptionComplete: false,
+                
+                init() {
+                    this.displayName = this.shortName.split('');
+                    
+                    setTimeout(() => { this.decryptName(); }, 1900);
+                },
+                
+                isInitial(index) {
+                    if (!this.decryptionComplete) return false; 
+                    // Подсвечиваем инициалы в полном имени
+                    return [0, 9, 18].includes(index);
+                },
+                
+                decryptName() {
+                    const target = this.fullName.split('');
+                    let currentLength = this.shortName.length; 
+                    const targetLength = target.length; 
+                    
+                    let interval = setInterval(() => {
+                        if (currentLength < targetLength) {
+                            currentLength++;
+                        }
+                        
+                        // Генерируем строку текущей длины с рандомными символами
+                        let tempArr = [];
+                        for(let i=0; i<currentLength; i++) {
+                            // Чем ближе к концу, тем больше вероятность правильной буквы
+                            if (i < currentLength - 5 || Math.random() > 0.5) {
+                                // Пытаемся подставить правильную букву если она уже "открыта"
+                                if (i < this.fullName.length) {
+                                    tempArr.push(this.fullName[i]);
+                                }
+                            } else {
+                                const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_#[]";
+                                tempArr.push(chars[Math.floor(Math.random() * chars.length)]);
+                            }
+                        }
+                        this.displayName = tempArr;
+
+                        if (currentLength >= targetLength && Math.random() > 0.9) {
+                            this.displayName = this.fullName.split('');
+                            this.decryptionComplete = true;
+                            clearInterval(interval);
+                        }
+                    }, 50); 
+                },
+
+                handleParallax() {
+                    const scrolled = window.pageYOffset;
+                    document.querySelectorAll('.parallax').forEach(el => {
+                        const speed = el.dataset.speed || 0.5;
+                        el.style.transform = `translateY(${scrolled * speed}px)`;
+                    });
+                }
+            }));
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

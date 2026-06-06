@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+
+{% block css %}
+<style>
+    .scanlines::before {
+        content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 40;
+        background: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(16,185,129,0.02) 3px, transparent 4px);
+    }
+
+    .cf-stage { position: relative; height: 460px; perspective: 1600px; perspective-origin: 50% 45%; overflow: hidden; user-select: none; }
+    .cf-track { position: absolute; inset: 0; transform-style: preserve-3d; }
+    .cf-card { position: absolute; top: 50%; left: 50%; width: 340px; height: 400px; margin-left: -170px; margin-top: -200px; transition: transform .55s cubic-bezier(.16,1,.3,1), opacity .55s ease, filter .55s ease; transform-style: preserve-3d; will-change: transform, opacity; }
+    .cf-card-inner { position: relative; width: 100%; height: 100%; background: linear-gradient(160deg, rgba(10,12,11,.95), rgba(3,3,3,.98)); border: 1px solid rgba(16,185,129,.25); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
+    .cf-card.is-active .cf-card-inner { border-color: rgba(16,185,129,.7); box-shadow: 0 0 40px rgba(16,185,129,.25), 0 0 0 1px rgba(16,185,129,.4); }
+    .cf-card.is-active .cf-glow { opacity: 1; }
+    .cf-glow { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .5s; z-index: 5; background: radial-gradient(circle at 50% 0%, rgba(16,185,129,.12), transparent 60%); }
+    .cf-imgwrap { position: relative; height: 200px; width: 100%; background: #050505; overflow: hidden; flex-shrink: 0; border-bottom: 1px solid rgba(16,185,129,.15); }
+    .cf-imgwrap img { width: 100%; height: 100%; object-fit: cover; opacity: .55; filter: grayscale(.4) brightness(.85); transition: all .5s; }
+    .cf-card.is-active .cf-imgwrap img { opacity: .9; filter: grayscale(0) brightness(1); }
+    .cf-noimg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(16,185,129,.3); font-size: 11px; letter-spacing: 2px; }
+    .cf-scan { position: absolute; left: 0; width: 100%; height: 2px; z-index: 10; background: #10b981; box-shadow: 0 0 12px #10b981; opacity: 0; }
+    .cf-card.is-active .cf-scan { opacity: .7; animation: cfScan 2.2s linear infinite; }
+    @keyframes cfScan { 0%{top:0;opacity:0} 8%{opacity:.8} 92%{opacity:.8} 100%{top:100%;opacity:0} }
+    .cf-body { padding: 20px 22px; display: flex; flex-direction: column; flex-grow: 1; }
+    .cf-name { font-size: 19px; font-weight: 700; color: #fff; margin-bottom: 10px; line-height: 1.2; }
+    .cf-card.is-active .cf-name { color: var(--accent); text-shadow: 0 0 12px rgba(16,185,129,.5); }
+    .cf-desc { font-size: 13px; color: #9ca3af; line-height: 1.55; flex-grow: 1; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+    .cf-foot { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.06); display: flex; align-items: center; justify-content: space-between; }
+    .cf-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+    .cf-tag.demo { color: var(--accent); }
+    .cf-tag.live { color: #ef4444; }
+    .cf-link { color: #d1d5db; text-decoration: none; font-size: 13px; transition: all .2s; }
+    .cf-link:hover { color: var(--accent); }
+    .cf-offline { color: #4b5563; font-size: 13px; }
+
+    .cf-nav { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 28px; }
+    .cf-btn { width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(16,185,129,.05); border: 1px solid rgba(16,185,129,.3); color: var(--accent); font-size: 18px; cursor: pointer; border-radius: 4px; transition: all .2s; font-family: inherit; }
+    .cf-btn:hover { background: rgba(16,185,129,.15); border-color: var(--accent); box-shadow: 0 0 16px rgba(16,185,129,.3); }
+    .cf-btn:active { transform: scale(.92); }
+    .cf-counter { font-size: 13px; color: #6b7280; letter-spacing: 1px; min-width: 70px; text-align: center; }
+    .cf-counter b { color: var(--accent); }
+    .cf-dots { display: flex; gap: 6px; justify-content: center; margin-top: 18px; }
+    .cf-dot { width: 8px; height: 8px; border-radius: 50%; background: #374151; cursor: pointer; transition: all .3s; border: none; }
+    .cf-dot.on { background: var(--accent); width: 22px; border-radius: 4px; box-shadow: 0 0 8px rgba(16,185,129,.5); }
+
+    .blk-title { font-size: 13px; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .blk-title::before { content: ''; width: 24px; height: 2px; background: var(--accent); }
+
+    .about-card { background: rgba(8,10,9,.5); border: 1px solid rgba(16,185,129,.2); border-radius: 8px; padding: 32px 34px; }
+    .about-row { display: flex; gap: 24px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+    .about-row:last-of-type { border-bottom: none; }
+    .about-key { color: #6b7280; min-width: 120px; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+    .about-val { color: #e5e7eb; font-size: 15px; }
+    .about-val .hi { color: var(--accent); font-weight: 600; }
+    .about-bio { margin-top: 24px; color: #9ca3af; font-size: 14px; line-height: 1.7; border-left: 2px solid rgba(16,185,129,.4); padding-left: 18px; }
+
+    .cform-label { color: #6b7280; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; display: block; }
+    .cform-field, .cform-area { width: 100%; background: rgba(8,10,9,.6); border: 1px solid rgba(16,185,129,.25); color: #d1fae5; font-family: inherit; font-size: 15px; padding: 14px 16px; border-radius: 4px; outline: none; transition: all .25s; }
+    .cform-area { min-height: 130px; resize: vertical; }
+    .cform-field:focus, .cform-area:focus { border-color: var(--accent); box-shadow: 0 0 18px rgba(16,185,129,.15); background: rgba(8,10,9,.85); }
+    .cform-field::placeholder, .cform-area::placeholder { color: #4b5563; }
+    .cform-wrap { margin-bottom: 22px; }
+    .cform-btn { background: rgba(16,185,129,.06); border: 1px solid var(--accent); color: var(--accent); font-family: inherit; font-size: 15px; font-weight: 600; letter-spacing: 1px; padding: 15px 36px; border-radius: 4px; cursor: pointer; transition: all .25s; }
+    .cform-btn:hover { background: rgba(16,185,129,.18); box-shadow: 0 0 24px rgba(16,185,129,.3); }
+    .cform-btn:active { transform: scale(.97); }
+    .cform-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .cform-status { margin-top: 16px; font-size: 13px; letter-spacing: .5px; min-height: 18px; }
+    .cform-status.ok { color: var(--accent); }
+    .cform-status.err { color: #ef4444; }
+    .cform-status.wait { color: #6b7280; }
+</style>
+{% endblock css %}
+
+{% block content %}
+    <header class="mb-20 relative">
+        <div class="text-xs text-emerald-600 mb-4 fade-in-up flex items-center space-x-2" style="animation-delay: 0.1s;">
+            <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+            <span>ACCESS GRANTED</span>
+        </div>
+        <div class="fade-in-up" style="animation-delay: 0.3s;">
+            <h1 class="text-2xl md:text-5xl lg:text-6xl font-bold leading-snug tracking-tight mb-2 min-h-[60px] md:min-h-[80px] break-normal whitespace-normal w-full max-w-full">
+                <template x-for="(char, index) in displayName" :key="index">
+                    <span :class="{ 'highlight': isInitial(index) }" x-text="char"></span>
+                </template>
+                <span class="blink text-emerald-500" x-show="!decryptionComplete">_</span>
+            </h1>
+            <p class="text-gray-400 text-sm md:text-base max-w-xl mt-4 border-l-2 border-emerald-500/30 pl-4">
+                Python Backend Engineer. Robust backend logic, clean architecture, real-time systems.
+            </p>
+        </div>
+    </header>
+
+    <section id="projects" class="mb-32 fade-in-up scroll-mt-28" style="animation-delay: 0.5s;" x-data="coverflow()" x-init="boot()">
+        <div class="blk-title">Projects</div>
+
+        {% if object_list %}
+        <div class="cf-stage scanlines">
+            <div class="cf-track">
+                {% for project in object_list %}
+                <div class="cf-card" :class="{ 'is-active': active === {{ forloop.counter0 }} }"
+                     :style="cardStyle({{ forloop.counter0 }})" @click="go({{ forloop.counter0 }})">
+                    <div class="cf-card-inner">
+                        <div class="cf-glow"></div>
+                        <div class="cf-imgwrap">
+                            <div class="cf-scan"></div>
+                            {% if project.poster %}
+                                <img src="{{ project.poster.url }}" alt="{{ project.name }}" loading="lazy">
+                            {% else %}
+                                <div class="cf-noimg">NO IMAGE</div>
+                            {% endif %}
+                        </div>
+                        <div class="cf-body">
+                            <div class="cf-name">{{ project.name }}</div>
+                            <div class="cf-desc">{{ project.description }}</div>
+                            <div class="cf-foot">
+                                {% if project.demonstration %}<span class="cf-tag demo">Demo</span>
+                                {% else %}<span class="cf-tag live">Live</span>{% endif %}
+                                {% if project.link %}
+                                    <a href="{{ project.link }}" target="_blank" rel="noopener noreferrer" class="cf-link" @click.stop>View &rarr;</a>
+                                {% else %}
+                                    <span class="cf-offline">Soon</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="cf-nav">
+            <button class="cf-btn" @click="prev()">&lt;</button>
+            <span class="cf-counter"><b x-text="active + 1"></b> / <span x-text="total"></span></span>
+            <button class="cf-btn" @click="next()">&gt;</button>
+        </div>
+        <div class="cf-dots">
+            {% for project in object_list %}
+            <button class="cf-dot" :class="{ 'on': active === {{ forloop.counter0 }} }" @click="go({{ forloop.counter0 }})"></button>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="border border-dashed border-gray-800 p-12 text-center rounded-lg">
+            <p class="text-gray-500">No projects yet</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <section id="about" class="mb-32 fade-in-up scroll-mt-28" style="animation-delay: 0.2s;">
+        <div class="blk-title">About</div>
+        <div class="about-card scanlines" style="position:relative">
+            <div class="about-row"><span class="about-key">Role</span><span class="about-val"><span class="hi">Python Backend Engineer</span></span></div>
+            <div class="about-row"><span class="about-key">Stack</span><span class="about-val">Django &middot; FastAPI &middot; Flask &middot; PostgreSQL &middot; Redis &middot; Docker</span></div>
+            <div class="about-row"><span class="about-key">Education</span><span class="about-val">Moscow Polytechnic University</span></div>
+            <div class="about-row"><span class="about-key">Status</span><span class="about-val hi">Open to Work</span></div>
+            <div class="about-row"><span class="about-key">LinkedIn</span><span class="about-val"><a href="https://www.linkedin.com/in/vladimir-melikhov-b9794040b/" target="_blank" rel="noopener noreferrer" class="about-link">Vladimir Melikhov &rarr;</a></span></div>
+            <div class="about-row"><span class="about-key">GitHub</span><span class="about-val"><a href="https://github.com/Vladimir-Melikhov" target="_blank" rel="noopener noreferrer" class="about-link">Vladimir-Melikhov &rarr;</a></span></div>
+            <div class="about-bio">
+                Backend engineer focused on building reliable APIs and clean, maintainable systems.
+                I care about solid architecture, performance, and shipping things that don't break.
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="mb-20 fade-in-up scroll-mt-28" style="animation-delay: 0.2s;" x-data="contactForm()">
+        {% csrf_token %}
+        <div class="blk-title">Contact</div>
+
+        <div class="cform-wrap">
+            <label class="cform-label">Name</label>
+            <input type="text" class="cform-field" x-model="name" placeholder="Your name">
+        </div>
+        <div class="cform-wrap">
+            <label class="cform-label">Email</label>
+            <input type="email" class="cform-field" x-model="email" placeholder="you@domain.com">
+        </div>
+        <div class="cform-wrap">
+            <label class="cform-label">Message</label>
+            <textarea class="cform-area" x-model="message" placeholder="Your message..."></textarea>
+        </div>
+
+        <button class="cform-btn" @click="transmit()" :disabled="sending" x-text="btnText">Send Message</button>
+        <div class="cform-status" :class="statusClass" x-text="status"></div>
+    </section>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('coverflow', () => ({
+            active: 0,
+            total: {{ object_list|length }},
+            boot() {
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowLeft') this.prev();
+                    if (e.key === 'ArrowRight') this.next();
+                });
+            },
+            cardStyle(i) {
+                const offset = i - this.active;
+                const abs = Math.abs(offset);
+                if (abs > 3) return 'opacity:0;pointer-events:none;transform:translateX(0) translateZ(-1200px);';
+                const x = offset * 230;
+                const z = -abs * 240;
+                const ry = offset === 0 ? 0 : (offset > 0 ? -42 : 42);
+                const op = abs === 0 ? 1 : (abs === 1 ? 0.75 : (abs === 2 ? 0.4 : 0.15));
+                const blur = abs === 0 ? 0 : abs * 1.2;
+                return 'transform: translateX(' + x + 'px) translateZ(' + z + 'px) rotateY(' + ry + 'deg); opacity:' + op + '; z-index:' + (100-abs) + '; filter: blur(' + blur + 'px);';
+            },
+            go(i) { if (i >= 0 && i < this.total) this.active = i; },
+            next() { this.active = (this.active + 1) % this.total; },
+            prev() { this.active = (this.active - 1 + this.total) % this.total; }
+        }));
+
+        Alpine.data('contactForm', () => ({
+            name: '', email: '', message: '',
+            status: '', statusClass: '', btnText: 'Send Message', sending: false,
+            getCsrf() {
+                const m = document.cookie.match(/csrftoken=([^;]+)/);
+                if (m) return m[1];
+                const el = document.querySelector('[name=csrfmiddlewaretoken]');
+                return el ? el.value : '';
+            },
+            async transmit() {
+                if (!this.name.trim() || !this.email.trim() || !this.message.trim()) {
+                    this.status = 'All fields are required'; this.statusClass = 'err'; return;
+                }
+                this.sending = true;
+                this.btnText = 'Sending...';
+                this.status = 'Sending...'; this.statusClass = 'wait';
+                try {
+                    const r = await fetch('{% url "contact_send" %}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCsrf() },
+                        body: JSON.stringify({ name: this.name, email: this.email, message: this.message })
+                    });
+                    const d = await r.json();
+                    if (r.ok && d.ok) {
+                        this.status = 'Message sent. I will get back to you.'; this.statusClass = 'ok';
+                        this.name = ''; this.email = ''; this.message = '';
+                    } else {
+                        this.status = 'Error: ' + (d.error || 'failed'); this.statusClass = 'err';
+                    }
+                } catch (e) {
+                    this.status = 'Connection error'; this.statusClass = 'err';
+                }
+                this.sending = false;
+                this.btnText = 'Send Message';
+            }
+        }));
+    });
+</script>
+{% endblock scripts %}

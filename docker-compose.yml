@@ -1,0 +1,53 @@
+services:
+  mvs_web:
+    build: .
+    container_name: mvs_web
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000"
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=mvs_db
+      - DB_PORT=5432
+    depends_on:
+      mvs_db:
+        condition: service_healthy
+    networks:
+      - internal
+      - web_public
+
+  mvs_db:
+    image: postgres:15-alpine
+    container_name: mvs_db
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
+
+networks:
+  internal:
+    driver: bridge
+  web_public:
+    external: true
